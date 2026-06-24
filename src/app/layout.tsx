@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
@@ -14,8 +14,16 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Tiến Lên Online",
-  description: "Play Tiến Lên with friends or bots, no signup required.",
+  title: "Leng Ngeab Jol",
+  description: "Play Ngeab Jol with friends or bots, no signup required.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: "#060a14",
 };
 
 export default function RootLayout({

@@ -1,13 +1,24 @@
+import * as deck from "@letele/playing-cards";
 import { Card } from "@/lib/types";
 
-const SUIT_SYMBOL: Record<Card["suit"], string> = {
-  spades: "♠",
-  clubs: "♣",
-  diamonds: "♦",
-  hearts: "♥",
+const SUIT_LETTER: Record<Card["suit"], string> = {
+  spades: "S",
+  clubs: "C",
+  diamonds: "D",
+  hearts: "H",
 };
 
-const RED_SUITS = new Set(["diamonds", "hearts"]);
+function rankSuffix(rank: Card["rank"]): string {
+  if (rank === "A") return "a";
+  if (rank === "J") return "j";
+  if (rank === "Q") return "q";
+  if (rank === "K") return "k";
+  return rank;
+}
+
+function cardComponentName(card: Card): string {
+  return `${SUIT_LETTER[card.suit]}${rankSuffix(card.rank)}`;
+}
 
 interface PlayingCardProps {
   card: Card;
@@ -19,38 +30,33 @@ interface PlayingCardProps {
 }
 
 export function PlayingCard({ card, selected, faceDown, small, disabled, onClick }: PlayingCardProps) {
-  const sizeClasses = small ? "w-9 h-[3.25rem] text-[11px]" : "w-14 sm:w-16 h-20 sm:h-[5.5rem] text-base";
+  const sizeClasses = small ? "w-10 h-[3.75rem]" : "w-16 sm:w-[4.5rem] h-[5.7rem] sm:h-[6.5rem]";
 
   if (faceDown) {
+    const Back = deck.B1;
     return (
-      <div
-        className={`${sizeClasses} rounded-lg bg-gradient-to-br from-blue-600 via-blue-700 to-blue-950 border border-blue-400/20 shadow-md ring-1 ring-black/20`}
-      >
-        <div className="h-full w-full rounded-lg border-2 border-blue-300/20 m-0.5" />
+      <div className={`${sizeClasses} rounded-lg shadow-md ring-1 ring-black/20 overflow-hidden`}>
+        <Back style={{ height: "100%", width: "100%" }} />
       </div>
     );
   }
 
-  const colorClass = RED_SUITS.has(card.suit) ? "text-rose-600" : "text-slate-900";
+  const Face = deck[cardComponentName(card)];
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`relative ${sizeClasses} rounded-lg bg-gradient-to-b from-white to-slate-50 flex flex-col items-center justify-center font-bold leading-none shadow-md transition-all duration-150 ${colorClass} ${
+      className={`relative ${sizeClasses} rounded-lg bg-white shadow-md transition-all duration-150 overflow-hidden ${
         selected
           ? "-translate-y-4 shadow-xl shadow-amber-500/30 ring-2 ring-amber-400"
           : disabled
             ? "opacity-60"
-            : "hover:-translate-y-2 hover:shadow-lg ring-1 ring-black/5"
+            : "hover:-translate-y-2 hover:shadow-lg ring-1 ring-black/10"
       } ${disabled && !selected ? "cursor-default" : "cursor-pointer"}`}
     >
-      <span className="absolute top-1 left-1.5 text-[10px] sm:text-xs font-bold tracking-tight">
-        {card.rank}
-        <span className="ml-0.5">{SUIT_SYMBOL[card.suit]}</span>
-      </span>
-      <span className="text-xl sm:text-2xl">{SUIT_SYMBOL[card.suit]}</span>
+      <Face style={{ height: "100%", width: "100%" }} />
     </button>
   );
 }

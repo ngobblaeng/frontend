@@ -1,7 +1,7 @@
-# Tiến Lên Online — Frontend
+# Leng Ngeab Jol — Frontend
 
 Next.js (App Router) + TypeScript + Tailwind + Zustand + React Query + Socket.IO client for the
-Tiến Lên card game MVP. Pairs with [ngobblaeng/backend](https://github.com/ngobblaeng/backend).
+Ngeab Jol card game MVP. Pairs with [ngobblaeng/backend](https://github.com/ngobblaeng/backend).
 
 ## Run locally
 

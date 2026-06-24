@@ -126,10 +126,10 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const isMyTurn = room.currentTurnPlayerId === socketId;
 
   return (
-    <main className="flex-1 flex flex-col px-4 py-5 gap-5 max-w-5xl w-full mx-auto pb-28">
-      <header className="flex items-center justify-between gap-3">
-        <div>
-          <h1 className="text-lg font-bold tracking-tight">
+    <main className="flex-1 flex flex-col px-3 sm:px-4 py-3 sm:py-5 gap-3 sm:gap-5 max-w-5xl w-full mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] landscape:pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
+      <header className="flex items-center justify-between gap-3 shrink-0">
+        <div className="min-w-0">
+          <h1 className="text-base sm:text-lg font-bold tracking-tight truncate">
             Room <span className="text-amber-400 font-mono">{room.roomCode}</span>
           </h1>
           <button
@@ -142,35 +142,37 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         </div>
         <button
           onClick={handleLeave}
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-rose-400 transition"
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-rose-400 transition shrink-0"
         >
           <LogOut className="h-4 w-4" />
-          Leave
+          <span className="hidden sm:inline">Leave</span>
         </button>
       </header>
 
       {errorMessage && (
-        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm px-3 py-2 animate-fade-up">
+        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm px-3 py-2 animate-fade-up shrink-0">
           {errorMessage}
         </div>
       )}
 
-      <section className="flex flex-wrap gap-2.5">
+      <section className="flex gap-2 sm:gap-2.5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 shrink-0 [scrollbar-width:thin]">
         {room.players.map((p) => (
-          <PlayerSeat key={p.id} player={p} isTurn={room.currentTurnPlayerId === p.id} isSelf={p.id === socketId} />
+          <div key={p.id} className="shrink-0">
+            <PlayerSeat player={p} isTurn={room.currentTurnPlayerId === p.id} isSelf={p.id === socketId} compact />
+          </div>
         ))}
       </section>
 
       {room.status === "lobby" && (
-        <section className="flex flex-col items-center gap-5 py-12 rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur">
-          <Users className="h-8 w-8 text-slate-500" />
-          <div className="text-center">
+        <section className="flex flex-col items-center gap-4 sm:gap-5 py-8 sm:py-12 rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur">
+          <Users className="h-7 w-7 sm:h-8 sm:w-8 text-slate-500" />
+          <div className="text-center px-4">
             <p className="font-medium text-slate-200">Waiting for players…</p>
             <p className="text-sm text-slate-500 mt-1">
               {room.players.length}/4 joined — share the room code to invite friends
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap justify-center gap-3 px-4">
             {isHost && room.players.length < 4 && (
               <button
                 onClick={handleFillBots}
@@ -193,13 +195,13 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       )}
 
       {room.status === "playing" && (
-        <section className="flex flex-col gap-5">
-          <div className="relative rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-6 min-h-[140px] shadow-inner flex items-center justify-center">
-            <p className="absolute top-3 left-4 text-[11px] uppercase tracking-wider text-emerald-300/60">
+        <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0">
+          <div className="relative rounded-2xl sm:rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-4 sm:p-6 min-h-[96px] sm:min-h-[140px] shadow-inner flex items-center justify-center shrink-0">
+            <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
               Last play
             </p>
             {room.lastCombo ? (
-              <div className="flex gap-1.5 animate-deal-in">
+              <div className="flex gap-1 sm:gap-1.5 animate-deal-in">
                 {room.lastCombo.cards.map((c, i) => (
                   <PlayingCard key={i} card={c} small />
                 ))}
@@ -209,14 +211,14 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             )}
           </div>
 
-          <div>
-            <p className="text-xs text-slate-400 mb-2.5 flex items-center gap-1.5">
-              {isMyTurn && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 mb-2 sm:mb-2.5 flex items-center gap-1.5 px-1">
+              {isMyTurn && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />}
               {isMyTurn ? "Your turn — select cards to play" : "Waiting for other players…"}
             </p>
-            <div className="flex gap-1.5 flex-wrap">
+            <div className="flex gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain -mx-3 px-3 pb-2 sm:flex-wrap sm:overflow-x-visible sm:mx-0 sm:px-0 justify-start sm:justify-center [scrollbar-width:thin]">
               {hand.map((c, i) => (
-                <div key={i} className="animate-deal-in" style={{ animationDelay: `${i * 25}ms` }}>
+                <div key={i} className="animate-deal-in shrink-0" style={{ animationDelay: `${i * 25}ms` }}>
                   <PlayingCard
                     card={c}
                     selected={selectedIndices.includes(i)}
@@ -231,19 +233,19 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       )}
 
       {room.status === "playing" && (
-        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-slate-950/90 backdrop-blur px-4 py-3">
-          <div className="max-w-5xl mx-auto flex gap-3">
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-slate-950/90 backdrop-blur px-3 sm:px-4 py-2.5 sm:py-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
+          <div className="max-w-5xl mx-auto flex gap-2.5 sm:gap-3">
             <button
               onClick={handlePlay}
               disabled={!isMyTurn || selectedIndices.length === 0}
-              className="flex-1 sm:flex-none rounded-xl bg-amber-500 px-8 py-3 font-semibold text-slate-950 shadow-lg shadow-amber-500/20 disabled:opacity-40 disabled:shadow-none hover:bg-amber-400 transition"
+              className="flex-1 sm:flex-none rounded-xl bg-amber-500 px-6 sm:px-8 py-2.5 sm:py-3 font-semibold text-slate-950 shadow-lg shadow-amber-500/20 disabled:opacity-40 disabled:shadow-none hover:bg-amber-400 transition"
             >
               Play{selectedIndices.length > 0 ? ` (${selectedIndices.length})` : ""}
             </button>
             <button
               onClick={handlePass}
               disabled={!isMyTurn || !room.lastCombo}
-              className="flex-1 sm:flex-none rounded-xl border border-slate-700 px-8 py-3 font-medium disabled:opacity-40 hover:bg-slate-800 transition"
+              className="flex-1 sm:flex-none rounded-xl border border-slate-700 px-6 sm:px-8 py-2.5 sm:py-3 font-medium disabled:opacity-40 hover:bg-slate-800 transition"
             >
               Pass
             </button>
@@ -252,9 +254,9 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       )}
 
       {room.status === "finished" && (
-        <section className="flex flex-col items-center gap-5 py-12 rounded-2xl border border-amber-400/20 bg-slate-900/40 backdrop-blur animate-fade-up">
-          <Trophy className="h-10 w-10 text-amber-400" />
-          <h2 className="text-2xl font-bold">Game Over</h2>
+        <section className="flex flex-col items-center gap-4 sm:gap-5 py-8 sm:py-12 rounded-2xl border border-amber-400/20 bg-slate-900/40 backdrop-blur animate-fade-up px-4">
+          <Trophy className="h-9 w-9 sm:h-10 sm:w-10 text-amber-400" />
+          <h2 className="text-xl sm:text-2xl font-bold">Game Over</h2>
           <ol className="flex flex-col gap-1.5 text-center">
             {room.winnerOrder.map((id, i) => {
               const p = room.players.find((pl) => pl.id === id);

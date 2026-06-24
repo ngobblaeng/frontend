@@ -35,7 +35,7 @@ export function ChatBox() {
     return (
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-30 flex items-center gap-2 rounded-full bg-amber-500 px-4 py-3 font-semibold text-slate-950 shadow-xl shadow-amber-500/30 hover:bg-amber-400 transition"
+        className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 sm:bottom-6 sm:right-6 landscape:bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 flex items-center gap-2 rounded-full bg-amber-500 p-3 sm:px-4 sm:py-3 font-semibold text-slate-950 shadow-xl shadow-amber-500/30 hover:bg-amber-400 transition"
       >
         <MessageCircle className="h-5 w-5" />
         {unread > 0 && (
@@ -48,7 +48,7 @@ export function ChatBox() {
   }
 
   return (
-    <div className="fixed bottom-24 right-4 sm:bottom-6 sm:right-6 z-30 flex w-72 flex-col h-80 rounded-2xl border border-white/10 bg-slate-900/95 backdrop-blur shadow-2xl overflow-hidden animate-fade-up">
+    <div className="fixed bottom-[calc(5.5rem+env(safe-area-inset-bottom))] right-3 left-3 sm:left-auto sm:bottom-6 sm:right-6 landscape:bottom-[calc(4.5rem+env(safe-area-inset-bottom))] z-30 flex w-auto sm:w-72 flex-col h-64 sm:h-80 max-h-[60vh] rounded-2xl border border-white/10 bg-slate-900/95 backdrop-blur shadow-2xl overflow-hidden animate-fade-up">
       <div className="flex items-center justify-between border-b border-white/10 px-3 py-2">
         <p className="text-sm font-semibold text-slate-200">Room chat</p>
         <button onClick={() => setOpen(false)} className="text-slate-500 hover:text-slate-200">

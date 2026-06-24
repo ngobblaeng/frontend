@@ -34,11 +34,19 @@ export default function Home() {
       <nav className="w-full max-w-5xl flex items-center justify-between py-6">
         <div className="flex items-center gap-2 font-bold text-lg">
           <Spade className="h-5 w-5 text-amber-400" />
-          Tiến Lên Online
+          Leng Ngeab Jol
         </div>
-        <Link href="/join" className="text-sm text-slate-400 hover:text-slate-200 transition">
-          Have a room code?
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link href="/leaderboard" className="hidden sm:inline text-sm text-slate-400 hover:text-slate-200 transition">
+            Leaderboard
+          </Link>
+          <Link href="/history" className="hidden sm:inline text-sm text-slate-400 hover:text-slate-200 transition">
+            Match History
+          </Link>
+          <Link href="/join" className="text-sm text-slate-400 hover:text-slate-200 transition">
+            Have a room code?
+          </Link>
+        </div>
       </nav>
 
       <section className="flex-1 w-full max-w-5xl flex flex-col items-center justify-center text-center gap-10 py-10">
@@ -60,10 +68,10 @@ export default function Home() {
             No account needed — just pick a name
           </span>
           <h1 className="mt-5 text-4xl sm:text-5xl font-bold tracking-tight">
-            Tiến Lên, <span className="text-amber-400">reimagined</span> for the web
+            Leng Ngeab Jol, <span className="text-amber-400">reimagined</span> for the web
           </h1>
           <p className="mt-4 text-slate-400 max-w-lg mx-auto text-lg">
-            Play Cambodian &amp; Vietnamese card games with friends or smart bots,
+            Leng Ngeab Jol with friends or smart bots,
             right from your browser.
           </p>
         </div>
@@ -105,6 +113,15 @@ export default function Home() {
           </div>
         ))}
       </section>
+
+      <footer className="sm:hidden flex items-center gap-5 pb-10 text-sm text-slate-400">
+        <Link href="/leaderboard" className="hover:text-slate-200 transition">
+          Leaderboard
+        </Link>
+        <Link href="/history" className="hover:text-slate-200 transition">
+          Match History
+        </Link>
+      </footer>
     </main>
   );
 }
