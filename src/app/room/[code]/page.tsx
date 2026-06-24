@@ -94,6 +94,10 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     getSocket().emit("game:pass");
   }
 
+  function handlePlayKatTehCard(index: number) {
+    getSocket().emit("game:playCards", [index]);
+  }
+
   function handleLeave() {
     getSocket().emit("room:leave");
     if (typeof window !== "undefined") {
@@ -124,9 +128,14 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const socketId = getSocket().id;
   const isHost = room.hostId === socketId;
   const isMyTurn = room.currentTurnPlayerId === socketId;
+  const isKatTeh = room.gameType === "katteh";
 
   return (
-    <main className="flex-1 flex flex-col px-3 sm:px-4 py-3 sm:py-5 gap-3 sm:gap-5 max-w-5xl w-full mx-auto pb-[calc(5.5rem+env(safe-area-inset-bottom))] landscape:pb-[calc(4.5rem+env(safe-area-inset-bottom))]">
+    <main
+      className={`flex-1 flex flex-col px-3 sm:px-4 py-3 sm:py-5 gap-3 sm:gap-5 max-w-5xl w-full mx-auto ${
+        isKatTeh ? "pb-6" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] landscape:pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
+      }`}
+    >
       <header className="flex items-center justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <h1 className="text-base sm:text-lg font-bold tracking-tight truncate">
@@ -158,7 +167,13 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       <section className="flex gap-2 sm:gap-2.5 overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap pb-1 shrink-0 [scrollbar-width:thin]">
         {room.players.map((p) => (
           <div key={p.id} className="shrink-0">
-            <PlayerSeat player={p} isTurn={room.currentTurnPlayerId === p.id} isSelf={p.id === socketId} compact />
+            <PlayerSeat
+              player={p}
+              isTurn={room.currentTurnPlayerId === p.id}
+              isSelf={p.id === socketId}
+              compact
+              showPoints={isKatTeh}
+            />
           </div>
         ))}
       </section>
@@ -194,7 +209,50 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         </section>
       )}
 
-      {room.status === "playing" && (
+      {room.status === "playing" && isKatTeh && (
+        <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0 pb-4">
+          <div className="relative rounded-2xl sm:rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-4 sm:p-6 min-h-[96px] sm:min-h-[140px] shadow-inner flex flex-col items-center justify-center shrink-0 gap-2">
+            <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
+              Current trick{room.leadSuit ? ` — leading suit: ${room.leadSuit}` : ""}
+            </p>
+            {room.currentTrick.length > 0 ? (
+              <div className="flex gap-2 sm:gap-3 animate-deal-in flex-wrap justify-center">
+                {room.currentTrick.map((t, i) => {
+                  const p = room.players.find((pl) => pl.id === t.playerId);
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1">
+                      <PlayingCard card={t.card} small />
+                      <span className="text-[10px] text-emerald-200/60 truncate max-w-[3.5rem]">{p?.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="text-emerald-200/50 text-sm">New trick — lead any card</p>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 mb-2 sm:mb-2.5 flex items-center gap-1.5 px-1">
+              {isMyTurn && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />}
+              {isMyTurn
+                ? room.leadSuit
+                  ? `Your turn — follow ${room.leadSuit} if you can (tap a card to play it)`
+                  : "Your turn — lead any card"
+                : "Waiting for other players…"}
+            </p>
+            <div className="flex gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain -mx-3 px-3 pb-2 sm:flex-wrap sm:overflow-x-visible sm:mx-0 sm:px-0 justify-start sm:justify-center [scrollbar-width:thin]">
+              {hand.map((c, i) => (
+                <div key={i} className="animate-deal-in shrink-0" style={{ animationDelay: `${i * 25}ms` }}>
+                  <PlayingCard card={c} disabled={!isMyTurn} onClick={() => isMyTurn && handlePlayKatTehCard(i)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {room.status === "playing" && !isKatTeh && (
         <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0">
           <div className="relative rounded-2xl sm:rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-4 sm:p-6 min-h-[96px] sm:min-h-[140px] shadow-inner flex items-center justify-center shrink-0">
             <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
@@ -232,7 +290,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         </section>
       )}
 
-      {room.status === "playing" && (
+      {room.status === "playing" && !isKatTeh && (
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-slate-950/90 backdrop-blur px-3 sm:px-4 py-2.5 sm:py-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
           <div className="max-w-5xl mx-auto flex gap-2.5 sm:gap-3">
             <button
@@ -263,6 +321,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               return (
                 <li key={id} className={`text-sm ${i === 0 ? "text-amber-300 font-semibold text-base" : "text-slate-300"}`}>
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "•"} {p?.name ?? id}
+                  {isKatTeh && ` — ${p?.points ?? 0} pts`}
                 </li>
               );
             })}

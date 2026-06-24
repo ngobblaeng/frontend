@@ -27,6 +27,13 @@ export interface Combo {
 
 export type RoomStatus = "lobby" | "playing" | "finished";
 
+export type GameType = "tienlen" | "katteh" | "sikukhmer";
+
+export interface TrickPlay {
+  playerId: string;
+  card: Card;
+}
+
 export interface PublicPlayer {
   id: string;
   name: string;
@@ -35,11 +42,12 @@ export interface PublicPlayer {
   connected: boolean;
   cardCount: number;
   finishedAt: number | null;
+  points?: number;
 }
 
 export interface PublicRoomState {
   roomCode: string;
-  gameType: "tienlen";
+  gameType: GameType;
   status: RoomStatus;
   hostId: string;
   players: PublicPlayer[];
@@ -50,6 +58,8 @@ export interface PublicRoomState {
   playedHistory: { playerId: string; cards: Card[] }[];
   winnerOrder: string[];
   isTraining: boolean;
+  currentTrick: TrickPlay[];
+  leadSuit: Suit | null;
 }
 
 export interface ChatMessage {

@@ -6,6 +6,7 @@ interface PlayerSeatProps {
   isTurn: boolean;
   isSelf: boolean;
   compact?: boolean;
+  showPoints?: boolean;
 }
 
 const AVATAR_COLORS = [
@@ -21,7 +22,7 @@ function colorFor(id: string) {
   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 }
 
-export function PlayerSeat({ player, isTurn, isSelf, compact }: PlayerSeatProps) {
+export function PlayerSeat({ player, isTurn, isSelf, compact, showPoints }: PlayerSeatProps) {
   const initials = player.name.replace(/\(Bot\)/i, "").trim().slice(0, 2).toUpperCase();
 
   return (
@@ -53,7 +54,11 @@ export function PlayerSeat({ player, isTurn, isSelf, compact }: PlayerSeatProps)
           {player.isHost && <Crown className="h-3 w-3 text-amber-400 shrink-0" />}
         </p>
         <p className="text-xs text-slate-400">
-          {player.finishedAt ? "Finished 🎉" : `${player.cardCount} cards`}
+          {showPoints
+            ? `${player.points ?? 0} pts`
+            : player.finishedAt
+              ? "Finished 🎉"
+              : `${player.cardCount} cards`}
         </p>
       </div>
     </div>

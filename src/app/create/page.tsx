@@ -3,9 +3,10 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Loader2, User, Bot as BotIcon } from "lucide-react";
+import { ArrowLeft, Loader2, User, Bot as BotIcon, Spade } from "lucide-react";
 import { getSocket } from "@/lib/socket";
 import { useGameStore } from "@/store/gameStore";
+import { GameType } from "@/lib/types";
 
 const BOT_LEVELS = [
   { value: "easy", label: "Easy", desc: "Relaxed, makes mistakes" },
@@ -13,11 +14,18 @@ const BOT_LEVELS = [
   { value: "hard", label: "Hard", desc: "Tracks cards, plays sharp" },
 ] as const;
 
+const GAME_TYPES: { value: GameType; label: string; native: string; desc: string }[] = [
+  { value: "tienlen", label: "Tiến Lên", native: "តាងឡេន", desc: "Shed all your cards first — singles, pairs, straights, and bombs." },
+  { value: "katteh", label: "Kat Teh", native: "កាត់តេ", desc: "Follow-suit trick-taking. Most points from A/10/K cards wins." },
+  { value: "sikukhmer", label: "Si Ku Khmer", native: "ស៊ីគូខ្មែរ", desc: "Shed all your cards first — singles, pairs, triples, and straights." },
+];
+
 function CreateRoomForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isTraining = searchParams.get("training") === "1";
   const [name, setName] = useState("");
+  const [gameType, setGameType] = useState<GameType>("tienlen");
   const [botLevel, setBotLevel] = useState<"easy" | "medium" | "hard">("hard");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +51,7 @@ function CreateRoomForm() {
       setError(msg);
       setLoading(false);
     });
-    socket.emit("room:create", { name: trimmed, isTraining, botLevel });
+    socket.emit("room:create", { name: trimmed, isTraining, botLevel, gameType });
   }
 
   return (
@@ -63,6 +71,32 @@ function CreateRoomForm() {
             <p className="text-sm text-slate-400 mt-1">
               {isTraining ? "Practice against 3 bots, start instantly." : "Set up a room and invite friends."}
             </p>
+          </div>
+
+          <div className="flex flex-col gap-2">
+            <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+              <Spade className="h-3.5 w-3.5" />
+              Game
+            </span>
+            <div className="flex flex-col gap-2">
+              {GAME_TYPES.map((g) => (
+                <button
+                  key={g.value}
+                  type="button"
+                  onClick={() => setGameType(g.value)}
+                  className={`text-left rounded-lg border px-3 py-2 transition ${
+                    gameType === g.value
+                      ? "border-amber-400 bg-amber-400/10"
+                      : "border-slate-700 hover:border-slate-600"
+                  }`}
+                >
+                  <p className={`text-sm font-medium ${gameType === g.value ? "text-amber-300" : "text-slate-200"}`}>
+                    {g.label} <span className="text-slate-500">{g.native}</span>
+                  </p>
+                  <p className="text-xs text-slate-500 mt-0.5">{g.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
 
           <label className="flex flex-col gap-1.5">
