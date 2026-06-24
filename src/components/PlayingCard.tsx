@@ -14,32 +14,43 @@ interface PlayingCardProps {
   selected?: boolean;
   faceDown?: boolean;
   small?: boolean;
+  disabled?: boolean;
   onClick?: () => void;
 }
 
-export function PlayingCard({ card, selected, faceDown, small, onClick }: PlayingCardProps) {
-  const sizeClasses = small ? "w-9 h-12 text-xs" : "w-14 h-20 text-base";
+export function PlayingCard({ card, selected, faceDown, small, disabled, onClick }: PlayingCardProps) {
+  const sizeClasses = small ? "w-9 h-[3.25rem] text-[11px]" : "w-14 sm:w-16 h-20 sm:h-[5.5rem] text-base";
 
   if (faceDown) {
     return (
       <div
-        className={`${sizeClasses} rounded-md bg-gradient-to-br from-blue-700 to-blue-900 border border-blue-950 shadow-sm`}
-      />
+        className={`${sizeClasses} rounded-lg bg-gradient-to-br from-blue-600 via-blue-700 to-blue-950 border border-blue-400/20 shadow-md ring-1 ring-black/20`}
+      >
+        <div className="h-full w-full rounded-lg border-2 border-blue-300/20 m-0.5" />
+      </div>
     );
   }
 
-  const colorClass = RED_SUITS.has(card.suit) ? "text-red-600" : "text-slate-900";
+  const colorClass = RED_SUITS.has(card.suit) ? "text-rose-600" : "text-slate-900";
 
   return (
     <button
       type="button"
       onClick={onClick}
-      className={`${sizeClasses} rounded-md bg-white border-2 flex flex-col items-center justify-center font-bold leading-none shadow-sm transition-transform ${colorClass} ${
-        selected ? "-translate-y-3 border-amber-400 ring-2 ring-amber-300" : "border-slate-300 hover:-translate-y-1"
-      }`}
+      disabled={disabled}
+      className={`relative ${sizeClasses} rounded-lg bg-gradient-to-b from-white to-slate-50 flex flex-col items-center justify-center font-bold leading-none shadow-md transition-all duration-150 ${colorClass} ${
+        selected
+          ? "-translate-y-4 shadow-xl shadow-amber-500/30 ring-2 ring-amber-400"
+          : disabled
+            ? "opacity-60"
+            : "hover:-translate-y-2 hover:shadow-lg ring-1 ring-black/5"
+      } ${disabled && !selected ? "cursor-default" : "cursor-pointer"}`}
     >
-      <span>{card.rank}</span>
-      <span className="text-lg">{SUIT_SYMBOL[card.suit]}</span>
+      <span className="absolute top-1 left-1.5 text-[10px] sm:text-xs font-bold tracking-tight">
+        {card.rank}
+        <span className="ml-0.5">{SUIT_SYMBOL[card.suit]}</span>
+      </span>
+      <span className="text-xl sm:text-2xl">{SUIT_SYMBOL[card.suit]}</span>
     </button>
   );
 }

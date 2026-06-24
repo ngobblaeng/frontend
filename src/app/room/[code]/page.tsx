@@ -1,7 +1,8 @@
 "use client";
 
-import { use, useEffect } from "react";
+import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Check, Copy, LogOut, Trophy, Users } from "lucide-react";
 import { getSocket } from "@/lib/socket";
 import { useGameStore } from "@/store/gameStore";
 import { PlayerSeat } from "@/components/PlayerSeat";
@@ -12,6 +13,7 @@ import { Card, ChatMessage, PublicRoomState } from "@/lib/types";
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
+  const [copied, setCopied] = useState(false);
   const {
     playerName,
     room,
@@ -60,8 +62,6 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     socket.on("chat:system", onChatSystem);
     socket.on("error:message", onErrorMessage);
 
-    // if we land here directly (e.g. page refresh) without an active room
-    // in the store, try to rejoin using the name saved for this session
     if (!room && storedName) {
       socket.emit("room:rejoin", { roomCode: code, name: storedName });
     }
@@ -104,9 +104,18 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     router.push("/");
   }
 
+  function handleCopyLink() {
+    const link = `${window.location.origin}/join?code=${code}`;
+    navigator.clipboard.writeText(link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
+  }
+
   if (!room) {
     return (
-      <main className="flex-1 flex items-center justify-center">
+      <main className="flex-1 flex flex-col items-center justify-center gap-3">
+        <div className="h-8 w-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
         <p className="text-slate-400">Connecting to room {code}…</p>
       </main>
     );
@@ -117,37 +126,56 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const isMyTurn = room.currentTurnPlayerId === socketId;
 
   return (
-    <main className="flex-1 flex flex-col px-4 py-6 gap-6 max-w-5xl w-full mx-auto">
-      <header className="flex items-center justify-between">
+    <main className="flex-1 flex flex-col px-4 py-5 gap-5 max-w-5xl w-full mx-auto pb-28">
+      <header className="flex items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold">Room {room.roomCode}</h1>
-          <p className="text-xs text-slate-400">
-            Invite link: {typeof window !== "undefined" ? `${window.location.origin}/join?code=${room.roomCode}` : room.roomCode}
-          </p>
+          <h1 className="text-lg font-bold tracking-tight">
+            Room <span className="text-amber-400 font-mono">{room.roomCode}</span>
+          </h1>
+          <button
+            onClick={handleCopyLink}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition mt-0.5"
+          >
+            {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+            {copied ? "Copied!" : "Copy invite link"}
+          </button>
         </div>
-        <button onClick={handleLeave} className="text-sm text-slate-400 hover:text-red-400">
-          Leave Room
+        <button
+          onClick={handleLeave}
+          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-rose-400 transition"
+        >
+          <LogOut className="h-4 w-4" />
+          Leave
         </button>
       </header>
 
       {errorMessage && (
-        <div className="rounded-md bg-red-500/10 border border-red-500/40 text-red-300 text-sm px-3 py-2">
+        <div className="rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-sm px-3 py-2 animate-fade-up">
           {errorMessage}
         </div>
       )}
 
-      <section className="flex flex-wrap gap-3">
+      <section className="flex flex-wrap gap-2.5">
         {room.players.map((p) => (
           <PlayerSeat key={p.id} player={p} isTurn={room.currentTurnPlayerId === p.id} isSelf={p.id === socketId} />
         ))}
       </section>
 
       {room.status === "lobby" && (
-        <section className="flex flex-col items-center gap-4 py-10">
-          <p className="text-slate-400">Waiting for players…</p>
+        <section className="flex flex-col items-center gap-5 py-12 rounded-2xl border border-white/10 bg-slate-900/40 backdrop-blur">
+          <Users className="h-8 w-8 text-slate-500" />
+          <div className="text-center">
+            <p className="font-medium text-slate-200">Waiting for players…</p>
+            <p className="text-sm text-slate-500 mt-1">
+              {room.players.length}/4 joined — share the room code to invite friends
+            </p>
+          </div>
           <div className="flex gap-3">
             {isHost && room.players.length < 4 && (
-              <button onClick={handleFillBots} className="rounded-md border border-slate-600 px-4 py-2 text-sm hover:bg-slate-800">
+              <button
+                onClick={handleFillBots}
+                className="rounded-xl border border-slate-700 bg-slate-900/60 px-4 py-2.5 text-sm font-medium hover:bg-slate-800 hover:border-slate-600 transition"
+              >
                 Fill with Bots
               </button>
             )}
@@ -155,7 +183,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               <button
                 onClick={handleStart}
                 disabled={room.players.length < 2}
-                className="rounded-md bg-amber-500 px-6 py-2 font-semibold text-slate-950 disabled:opacity-40 hover:bg-amber-400"
+                className="rounded-xl bg-amber-500 px-6 py-2.5 font-semibold text-slate-950 shadow-lg shadow-amber-500/20 disabled:opacity-40 disabled:shadow-none hover:bg-amber-400 transition"
               >
                 Start Game
               </button>
@@ -165,67 +193,83 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       )}
 
       {room.status === "playing" && (
-        <section className="flex flex-col gap-4">
-          <div className="rounded-lg border border-slate-700 bg-slate-900/50 p-4 min-h-[100px]">
-            <p className="text-xs text-slate-500 mb-2">Last play</p>
-            <div className="flex gap-1">
-              {room.lastCombo?.cards.map((c, i) => (
-                <PlayingCard key={i} card={c} small />
-              ))}
-              {!room.lastCombo && <p className="text-slate-500 text-sm">Trick is open — play any combo</p>}
-            </div>
+        <section className="flex flex-col gap-5">
+          <div className="relative rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-6 min-h-[140px] shadow-inner flex items-center justify-center">
+            <p className="absolute top-3 left-4 text-[11px] uppercase tracking-wider text-emerald-300/60">
+              Last play
+            </p>
+            {room.lastCombo ? (
+              <div className="flex gap-1.5 animate-deal-in">
+                {room.lastCombo.cards.map((c, i) => (
+                  <PlayingCard key={i} card={c} small />
+                ))}
+              </div>
+            ) : (
+              <p className="text-emerald-200/50 text-sm">Trick is open — play any combo</p>
+            )}
           </div>
 
           <div>
-            <p className="text-xs text-slate-500 mb-2">
+            <p className="text-xs text-slate-400 mb-2.5 flex items-center gap-1.5">
+              {isMyTurn && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />}
               {isMyTurn ? "Your turn — select cards to play" : "Waiting for other players…"}
             </p>
-            <div className="flex gap-1 flex-wrap">
+            <div className="flex gap-1.5 flex-wrap">
               {hand.map((c, i) => (
-                <PlayingCard
-                  key={i}
-                  card={c}
-                  selected={selectedIndices.includes(i)}
-                  onClick={() => isMyTurn && toggleSelected(i)}
-                />
+                <div key={i} className="animate-deal-in" style={{ animationDelay: `${i * 25}ms` }}>
+                  <PlayingCard
+                    card={c}
+                    selected={selectedIndices.includes(i)}
+                    disabled={!isMyTurn}
+                    onClick={() => isMyTurn && toggleSelected(i)}
+                  />
+                </div>
               ))}
             </div>
-          </div>
-
-          <div className="flex gap-3">
-            <button
-              onClick={handlePlay}
-              disabled={!isMyTurn || selectedIndices.length === 0}
-              className="rounded-md bg-amber-500 px-6 py-2 font-semibold text-slate-950 disabled:opacity-40 hover:bg-amber-400"
-            >
-              Play
-            </button>
-            <button
-              onClick={handlePass}
-              disabled={!isMyTurn || !room.lastCombo}
-              className="rounded-md border border-slate-600 px-6 py-2 disabled:opacity-40 hover:bg-slate-800"
-            >
-              Pass
-            </button>
           </div>
         </section>
       )}
 
+      {room.status === "playing" && (
+        <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-slate-950/90 backdrop-blur px-4 py-3">
+          <div className="max-w-5xl mx-auto flex gap-3">
+            <button
+              onClick={handlePlay}
+              disabled={!isMyTurn || selectedIndices.length === 0}
+              className="flex-1 sm:flex-none rounded-xl bg-amber-500 px-8 py-3 font-semibold text-slate-950 shadow-lg shadow-amber-500/20 disabled:opacity-40 disabled:shadow-none hover:bg-amber-400 transition"
+            >
+              Play{selectedIndices.length > 0 ? ` (${selectedIndices.length})` : ""}
+            </button>
+            <button
+              onClick={handlePass}
+              disabled={!isMyTurn || !room.lastCombo}
+              className="flex-1 sm:flex-none rounded-xl border border-slate-700 px-8 py-3 font-medium disabled:opacity-40 hover:bg-slate-800 transition"
+            >
+              Pass
+            </button>
+          </div>
+        </div>
+      )}
+
       {room.status === "finished" && (
-        <section className="flex flex-col items-center gap-4 py-10">
+        <section className="flex flex-col items-center gap-5 py-12 rounded-2xl border border-amber-400/20 bg-slate-900/40 backdrop-blur animate-fade-up">
+          <Trophy className="h-10 w-10 text-amber-400" />
           <h2 className="text-2xl font-bold">Game Over</h2>
-          <ol className="text-slate-300">
+          <ol className="flex flex-col gap-1.5 text-center">
             {room.winnerOrder.map((id, i) => {
               const p = room.players.find((pl) => pl.id === id);
               return (
-                <li key={id}>
-                  {i + 1}. {p?.name ?? id}
+                <li key={id} className={`text-sm ${i === 0 ? "text-amber-300 font-semibold text-base" : "text-slate-300"}`}>
+                  {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "•"} {p?.name ?? id}
                 </li>
               );
             })}
           </ol>
           {isHost && (
-            <button onClick={handleStart} className="rounded-md bg-amber-500 px-6 py-2 font-semibold text-slate-950 hover:bg-amber-400">
+            <button
+              onClick={handleStart}
+              className="rounded-xl bg-amber-500 px-6 py-2.5 font-semibold text-slate-950 shadow-lg shadow-amber-500/20 hover:bg-amber-400 transition"
+            >
               Play Again
             </button>
           )}
