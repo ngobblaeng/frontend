@@ -2,6 +2,7 @@
 
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Check, Copy, LogOut, Trophy, Users } from "lucide-react";
 import { getSocket } from "@/lib/socket";
 import { useGameStore } from "@/store/gameStore";
@@ -53,7 +54,16 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     }
     function onErrorMessage(msg: string) {
       setError(msg);
-      setTimeout(() => setError(null), 4000);
+      // if we still have no room (e.g. rejoining a room that no longer
+      // exists), keep the message visible instead of reverting to an
+      // infinite "Connecting…" spinner, and drop the stale session so a
+      // refresh doesn't just retry the same dead room
+      if (useGameStore.getState().room) {
+        setTimeout(() => setError(null), 4000);
+      } else if (typeof window !== "undefined") {
+        sessionStorage.removeItem("playerName");
+        sessionStorage.removeItem("roomCode");
+      }
     }
 
     socket.on("room:state", onRoomState);
@@ -117,6 +127,21 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   }
 
   if (!room) {
+    if (errorMessage) {
+      return (
+        <main className="flex-1 flex flex-col items-center justify-center gap-4 px-6 text-center">
+          <p className="text-rose-400 bg-rose-500/10 border border-rose-500/30 rounded-lg px-4 py-2.5 max-w-sm">
+            {errorMessage}
+          </p>
+          <Link
+            href="/"
+            className="rounded-lg border border-slate-700 px-5 py-2.5 text-sm font-medium hover:bg-slate-800 transition"
+          >
+            Back to home
+          </Link>
+        </main>
+      );
+    }
     return (
       <main className="flex-1 flex flex-col items-center justify-center gap-3">
         <div className="h-8 w-8 rounded-full border-2 border-amber-400 border-t-transparent animate-spin" />
