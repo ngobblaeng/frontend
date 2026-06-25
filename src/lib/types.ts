@@ -62,6 +62,8 @@ export interface PublicRoomState {
   leadSuit: Suit | null;
   sikuTable: Card[];
   sikuCenterRemaining: number;
+  finalRound: boolean;
+  finalPlacements: Record<string, { faceUp: Card; faceDown: Card | null }>;
 }
 
 export interface ChatMessage {

@@ -121,6 +121,11 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     playCardPlay();
   }
 
+  function handlePlaceFinalCard(faceUpIndex: number) {
+    getSocket().emit("game:placeFinalCards", { faceUpIndex });
+    playCardPlay();
+  }
+
   function handlePlaySikuCard(index: number) {
     getSocket().emit("game:playCards", [index]);
     playCardPlay();
@@ -263,7 +268,60 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         </section>
       )}
 
-      {room.status === "playing" && isKatTeh && (
+      {room.status === "playing" && isKatTeh && room.finalRound && (
+        <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0 pb-4">
+          <div className="rounded-2xl sm:rounded-[2rem] border border-amber-400/30 bg-[radial-gradient(ellipse_at_center,_#3a2c0f,_#16120a)] p-4 sm:p-6 shadow-inner flex flex-col items-center justify-center gap-3 text-center">
+            <p className="text-amber-300 text-sm font-semibold">Final Showdown — 2 cards each</p>
+            <p className="text-amber-100/70 text-xs max-w-sm">
+              Pick one card to play face-up (sets the contested suit) — the other goes face-down and
+              decides the round once everyone has placed.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap justify-center gap-2.5">
+            {room.players.map((p) => {
+              const placement = room.finalPlacements[p.id];
+              return (
+                <div
+                  key={p.id}
+                  className="flex flex-col items-center gap-1.5 rounded-xl border border-white/10 bg-slate-900/50 px-3 py-2.5 min-w-[96px]"
+                >
+                  <span className="text-xs text-slate-300 truncate max-w-[5.5rem]">{p.name}</span>
+                  {placement ? (
+                    <div className="flex gap-1">
+                      <PlayingCard card={placement.faceUp} small />
+                      <div className="flex h-[3.4rem] w-9 items-center justify-center rounded-md border border-slate-600 bg-slate-800 text-[10px] text-slate-400">
+                        ?
+                      </div>
+                    </div>
+                  ) : (
+                    <span className="text-[10px] text-slate-500">Choosing…</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {!room.finalPlacements[socketId ?? ""] && hand.length === 2 && (
+            <div className="flex flex-col items-center gap-2">
+              <p className="text-xs text-slate-400">Choose which card to play face-up:</p>
+              <div className="flex gap-3">
+                {hand.map((c, i) => (
+                  <button
+                    key={i}
+                    onClick={() => handlePlaceFinalCard(i)}
+                    className="rounded-xl border border-amber-400/40 bg-amber-400/10 p-1.5 hover:bg-amber-400/20 transition"
+                  >
+                    <PlayingCard card={c} />
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </section>
+      )}
+
+      {room.status === "playing" && isKatTeh && !room.finalRound && (
         <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0 pb-4">
           <div className="relative rounded-2xl sm:rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-4 sm:p-6 min-h-[96px] sm:min-h-[140px] shadow-inner flex flex-col items-center justify-center shrink-0 gap-2">
             <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
@@ -404,13 +462,38 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         <section className="flex flex-col items-center gap-4 sm:gap-5 py-8 sm:py-12 rounded-2xl border border-amber-400/20 bg-slate-900/40 backdrop-blur animate-fade-up px-4">
           <Trophy className="h-9 w-9 sm:h-10 sm:w-10 text-amber-400" />
           <h2 className="text-xl sm:text-2xl font-bold">Game Over</h2>
+
+          {isKatTeh && room.finalRound && (
+            <div className="flex flex-wrap justify-center gap-2.5">
+              {room.players.map((p) => {
+                const placement = room.finalPlacements[p.id];
+                if (!placement) return null;
+                const isWinner = room.winnerOrder[0] === p.id;
+                return (
+                  <div
+                    key={p.id}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl border px-3 py-2.5 min-w-[96px] ${
+                      isWinner ? "border-amber-400/60 bg-amber-400/10" : "border-white/10 bg-slate-900/50"
+                    }`}
+                  >
+                    <span className="text-xs text-slate-300 truncate max-w-[5.5rem]">{p.name}</span>
+                    <div className="flex gap-1">
+                      <PlayingCard card={placement.faceUp} small />
+                      {placement.faceDown && <PlayingCard card={placement.faceDown} small />}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           <ol className="flex flex-col gap-1.5 text-center">
             {room.winnerOrder.map((id, i) => {
               const p = room.players.find((pl) => pl.id === id);
               return (
                 <li key={id} className={`text-sm ${i === 0 ? "text-amber-300 font-semibold text-base" : "text-slate-300"}`}>
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "•"} {p?.name ?? id}
-                  {isKatTeh && ` — ${p?.points ?? 0} pts`}
+                  {isKatTeh && ` — ${p?.points ?? 0} tricks`}
                   {isSiku && ` — ${p?.points ?? 0} pairs`}
                 </li>
               );
