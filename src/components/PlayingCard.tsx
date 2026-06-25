@@ -21,7 +21,7 @@ function cardComponentName(card: Card): string {
 }
 
 interface PlayingCardProps {
-  card: Card;
+  card?: Card | null;
   selected?: boolean;
   faceDown?: boolean;
   small?: boolean;
@@ -32,7 +32,7 @@ interface PlayingCardProps {
 export function PlayingCard({ card, selected, faceDown, small, disabled, onClick }: PlayingCardProps) {
   const sizeClasses = small ? "w-10 h-[3.75rem]" : "w-16 sm:w-[4.5rem] h-[5.7rem] sm:h-[6.5rem]";
 
-  if (faceDown) {
+  if (faceDown || !card) {
     const Back = deck.B1;
     return (
       <div className={`${sizeClasses} rounded-lg shadow-md ring-1 ring-black/20 overflow-hidden`}>

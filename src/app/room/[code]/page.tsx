@@ -3,7 +3,7 @@
 import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Check, Copy, LogOut, Trophy, Users } from "lucide-react";
+import { Check, Copy, LogOut, ShieldX, Swords, Trophy, Users } from "lucide-react";
 import { getSocket } from "@/lib/socket";
 import { useGameStore } from "@/store/gameStore";
 import { PlayerSeat } from "@/components/PlayerSeat";
@@ -12,12 +12,14 @@ import { PlayingCard } from "@/components/PlayingCard";
 import { SoundToggle } from "@/components/SoundToggle";
 import { Card, ChatMessage, PublicRoomState } from "@/lib/types";
 import { playCardPlay, playChat, playError, playPass, playSelect, playWin } from "@/lib/sound";
+import { canBeatCurrent, kattehRankValue } from "@/lib/katteh";
 
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
+  const [foldMode, setFoldMode] = useState(false);
   const {
     playerName,
     room,
@@ -34,6 +36,12 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   } = useGameStore();
 
   const lastStatusRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (room?.gameType !== "katteh" || room.currentTrick.length === 0) {
+      setFoldMode(false);
+    }
+  }, [room?.gameType, room?.currentTrick.length]);
 
   useEffect(() => {
     const socket = getSocket();
@@ -122,6 +130,12 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     playCardPlay();
   }
 
+  function handleFoldKatTehCard(index: number) {
+    getSocket().emit("game:foldKatTehCard", [index]);
+    setFoldMode(false);
+    playPass();
+  }
+
   function handlePlaceFinalCard(faceUpIndex: number) {
     getSocket().emit("game:placeFinalCards", { faceUpIndex });
     playCardPlay();
@@ -192,6 +206,19 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const isKatTeh = room.gameType === "katteh";
   const isSiku = room.gameType === "sikukhmer";
 
+  const isLeadingTrick = room.currentTrick.length === 0;
+  const nonFoldedTrick = room.currentTrick.filter((t) => !t.folded && t.card);
+  const currentBestPlay =
+    nonFoldedTrick.length > 0
+      ? nonFoldedTrick.reduce((best, t) => (kattehRankValue(t.card!.rank) > kattehRankValue(best.card!.rank) ? t : best))
+      : null;
+  const priorityPlayerId = currentBestPlay?.playerId ?? null;
+  const lastTrickWinnerId =
+    isKatTeh && isLeadingTrick && room.playedHistory.length > 0
+      ? room.playedHistory[room.playedHistory.length - 1].playerId
+      : null;
+  const canBeatAny = hand.some((c) => canBeatCurrent(c, room.leadSuit, room.currentTrick));
+
   return (
     <main
       className={`flex-1 flex flex-col px-3 sm:px-4 py-3 sm:py-5 gap-3 sm:gap-5 max-w-5xl w-full mx-auto ${
@@ -256,6 +283,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               isSelf={p.id === socketId}
               compact
               showPoints={isKatTeh || isSiku}
+              pointsLabel={isKatTeh ? "tricks" : "pairs"}
             />
           </div>
         ))}
@@ -351,14 +379,29 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
               Current trick{room.leadSuit ? ` — leading suit: ${room.leadSuit}` : ""}
             </p>
+            {lastTrickWinnerId && (
+              <p className="absolute top-2.5 right-3 sm:top-3 sm:right-4 text-[10px] sm:text-[11px] text-amber-300/80">
+                🏆 {room.players.find((p) => p.id === lastTrickWinnerId)?.name} won the last trick
+              </p>
+            )}
             {room.currentTrick.length > 0 ? (
               <div className="flex gap-2 sm:gap-3 animate-deal-in flex-wrap justify-center">
                 {room.currentTrick.map((t, i) => {
                   const p = room.players.find((pl) => pl.id === t.playerId);
+                  const isPriority = !t.folded && t.playerId === priorityPlayerId;
                   return (
                     <div key={i} className="flex flex-col items-center gap-1">
-                      <PlayingCard card={t.card} small />
-                      <span className="text-[10px] text-emerald-200/60 truncate max-w-[3.5rem]">{p?.name}</span>
+                      <div className={isPriority ? "rounded-lg ring-2 ring-amber-400 shadow-lg shadow-amber-500/30" : ""}>
+                        <PlayingCard card={t.card} faceDown={t.folded} small />
+                      </div>
+                      <span
+                        className={`text-[10px] truncate max-w-[3.5rem] ${
+                          isPriority ? "text-amber-300 font-semibold" : "text-emerald-200/60"
+                        }`}
+                      >
+                        {p?.name}
+                        {t.folded ? " (folded)" : isPriority ? " 👑" : ""}
+                      </span>
                     </div>
                   );
                 })}
@@ -368,22 +411,77 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             )}
           </div>
 
+          {!isLeadingTrick && currentBestPlay?.card && (
+            <p className="text-xs text-center text-slate-400">
+              Beat: <span className="font-semibold text-emerald-300">{currentBestPlay.card.rank}</span> of{" "}
+              {room.leadSuit} — held by{" "}
+              <span className="font-semibold">{room.players.find((p) => p.id === priorityPlayerId)?.name}</span>
+            </p>
+          )}
+
           <div className="min-w-0">
             <p className="text-xs text-slate-400 mb-2 sm:mb-2.5 flex items-center gap-1.5 px-1">
               {isMyTurn && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />}
               {isMyTurn
-                ? room.leadSuit
-                  ? `Your turn — follow ${room.leadSuit} if you can (tap a card to play it)`
-                  : "Your turn — lead any card"
+                ? isLeadingTrick
+                  ? "Your turn — lead any card"
+                  : canBeatAny
+                    ? foldMode
+                      ? "Fold mode — tap a card to discard it face-down"
+                      : `Your turn — beat with a higher ${room.leadSuit}, or fold`
+                    : "You can't beat this — fold a card"
                 : "Waiting for other players…"}
             </p>
             <div className="flex gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain -mx-3 px-3 pb-2 sm:flex-wrap sm:overflow-x-visible sm:mx-0 sm:px-0 justify-start sm:justify-center [scrollbar-width:thin]">
-              {hand.map((c, i) => (
-                <div key={i} className="animate-deal-in shrink-0" style={{ animationDelay: `${i * 25}ms` }}>
-                  <PlayingCard card={c} disabled={!isMyTurn} onClick={() => isMyTurn && handlePlayKatTehCard(i)} />
-                </div>
-              ))}
+              {hand.map((c, i) => {
+                const canBeat = isLeadingTrick || canBeatCurrent(c, room.leadSuit, room.currentTrick);
+                const willFold = !isLeadingTrick && (foldMode || !canBeat);
+                return (
+                  <div
+                    key={i}
+                    className={`animate-deal-in shrink-0 ${
+                      isMyTurn && !isLeadingTrick && !willFold ? "ring-2 ring-emerald-400 rounded-lg" : ""
+                    } ${isMyTurn && willFold ? "opacity-70" : ""}`}
+                    style={{ animationDelay: `${i * 25}ms` }}
+                  >
+                    <PlayingCard
+                      card={c}
+                      disabled={!isMyTurn}
+                      onClick={() => {
+                        if (!isMyTurn) return;
+                        if (willFold) handleFoldKatTehCard(i);
+                        else handlePlayKatTehCard(i);
+                      }}
+                    />
+                  </div>
+                );
+              })}
             </div>
+            {isMyTurn && !isLeadingTrick && (
+              <div className="flex justify-center gap-2.5 mt-3">
+                <button
+                  onClick={() => setFoldMode(false)}
+                  disabled={!canBeatAny}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-30 ${
+                    !foldMode ? "bg-emerald-500 text-slate-950" : "border border-slate-700 hover:bg-slate-800"
+                  }`}
+                >
+                  <Swords className="h-4 w-4" />
+                  Beat
+                </button>
+                <button
+                  onClick={() => setFoldMode(true)}
+                  className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition ${
+                    foldMode || !canBeatAny
+                      ? "bg-rose-500 text-slate-950"
+                      : "border border-slate-700 hover:bg-slate-800"
+                  }`}
+                >
+                  <ShieldX className="h-4 w-4" />
+                  Fold
+                </button>
+              </div>
+            )}
           </div>
         </section>
       )}
@@ -404,6 +502,27 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               <p className="text-emerald-200/50 text-sm">No loose cards on the table yet</p>
             )}
           </div>
+
+          {room.playedHistory.length > 0 && (
+            <div className="rounded-xl border border-white/10 bg-slate-900/40 p-2.5">
+              <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">Pairs discarded</p>
+              <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:thin]">
+                {room.playedHistory.slice(-10).map((h, i) => {
+                  const p = room.players.find((pl) => pl.id === h.playerId);
+                  return (
+                    <div key={i} className="flex flex-col items-center gap-1 shrink-0">
+                      <div className="flex -space-x-3">
+                        {h.cards.map((c, j) => (
+                          <PlayingCard key={j} card={c} small />
+                        ))}
+                      </div>
+                      <span className="text-[10px] text-slate-500 truncate max-w-[4rem]">{p?.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="min-w-0">
             <p className="text-xs text-slate-400 mb-2 sm:mb-2.5 flex items-center gap-1.5 px-1">

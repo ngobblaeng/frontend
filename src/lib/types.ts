@@ -31,7 +31,8 @@ export type GameType = "tienlen" | "katteh" | "sikukhmer";
 
 export interface TrickPlay {
   playerId: string;
-  card: Card;
+  card: Card | null;
+  folded: boolean;
 }
 
 export interface PublicPlayer {
