@@ -17,6 +17,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const { code } = use(params);
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const {
     playerName,
     room,
@@ -154,6 +155,13 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     });
   }
 
+  function handleCopyCode() {
+    navigator.clipboard.writeText(room?.roomCode ?? code).then(() => {
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 1500);
+    });
+  }
+
   if (!room) {
     if (errorMessage) {
       return (
@@ -195,15 +203,31 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
       <header className="flex items-center justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <h1 className="text-base sm:text-lg font-bold tracking-tight truncate">
-            Room <span className="text-amber-400 font-mono">{room.roomCode}</span>
+            Room{" "}
+            <button
+              onClick={handleCopyCode}
+              title="Copy room code"
+              className="text-amber-400 font-mono hover:text-amber-300 transition"
+            >
+              {room.roomCode}
+            </button>
           </h1>
-          <button
-            onClick={handleCopyLink}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition mt-0.5"
-          >
-            {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
-            {copied ? "Copied!" : "Copy invite link"}
-          </button>
+          <div className="flex items-center gap-3 mt-0.5">
+            <button
+              onClick={handleCopyCode}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition"
+            >
+              {codeCopied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+              {codeCopied ? "Copied!" : "Copy code"}
+            </button>
+            <button
+              onClick={handleCopyLink}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition"
+            >
+              {copied ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+              {copied ? "Copied!" : "Copy invite link"}
+            </button>
+          </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <SoundToggle />
