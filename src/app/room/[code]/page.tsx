@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Check, Copy, LogOut, Trophy, Users } from "lucide-react";
@@ -9,7 +9,9 @@ import { useGameStore } from "@/store/gameStore";
 import { PlayerSeat } from "@/components/PlayerSeat";
 import { ChatBox } from "@/components/ChatBox";
 import { PlayingCard } from "@/components/PlayingCard";
+import { SoundToggle } from "@/components/SoundToggle";
 import { Card, ChatMessage, PublicRoomState } from "@/lib/types";
+import { playCardPlay, playChat, playError, playPass, playSelect, playWin } from "@/lib/sound";
 
 export default function RoomPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = use(params);
@@ -30,6 +32,8 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     reset,
   } = useGameStore();
 
+  const lastStatusRef = useRef<string | null>(null);
+
   useEffect(() => {
     const socket = getSocket();
     const storedName =
@@ -41,6 +45,10 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     }
 
     function onRoomState(state: PublicRoomState) {
+      if (state.status === "finished" && lastStatusRef.current !== "finished") {
+        playWin();
+      }
+      lastStatusRef.current = state.status;
       setRoom(state);
     }
     function onHandUpdate(cards: Card[]) {
@@ -48,12 +56,14 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     }
     function onChatMessage(msg: ChatMessage) {
       addChat(msg);
+      playChat();
     }
     function onChatSystem(text: string) {
       addChat({ name: "System", text, at: Date.now() });
     }
     function onErrorMessage(msg: string) {
       setError(msg);
+      playError();
       // if we still have no room (e.g. rejoining a room that no longer
       // exists), keep the message visible instead of reverting to an
       // infinite "Connecting…" spinner, and drop the stale session so a
@@ -98,14 +108,27 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
     if (selectedIndices.length === 0) return;
     getSocket().emit("game:playCards", selectedIndices);
     clearSelected();
+    playCardPlay();
   }
 
   function handlePass() {
     getSocket().emit("game:pass");
+    playPass();
   }
 
   function handlePlayKatTehCard(index: number) {
     getSocket().emit("game:playCards", [index]);
+    playCardPlay();
+  }
+
+  function handlePlaySikuCard(index: number) {
+    getSocket().emit("game:playCards", [index]);
+    playCardPlay();
+  }
+
+  function handleSelectCard(index: number) {
+    toggleSelected(index);
+    playSelect();
   }
 
   function handleLeave() {
@@ -154,11 +177,14 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
   const isHost = room.hostId === socketId;
   const isMyTurn = room.currentTurnPlayerId === socketId;
   const isKatTeh = room.gameType === "katteh";
+  const isSiku = room.gameType === "sikukhmer";
 
   return (
     <main
       className={`flex-1 flex flex-col px-3 sm:px-4 py-3 sm:py-5 gap-3 sm:gap-5 max-w-5xl w-full mx-auto ${
-        isKatTeh ? "pb-6" : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] landscape:pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
+        isKatTeh || isSiku
+          ? "pb-6"
+          : "pb-[calc(5.5rem+env(safe-area-inset-bottom))] landscape:pb-[calc(4.5rem+env(safe-area-inset-bottom))]"
       }`}
     >
       <header className="flex items-center justify-between gap-3 shrink-0">
@@ -174,13 +200,16 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
             {copied ? "Copied!" : "Copy invite link"}
           </button>
         </div>
-        <button
-          onClick={handleLeave}
-          className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-rose-400 transition shrink-0"
-        >
-          <LogOut className="h-4 w-4" />
-          <span className="hidden sm:inline">Leave</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <SoundToggle />
+          <button
+            onClick={handleLeave}
+            className="inline-flex items-center gap-1.5 text-sm text-slate-400 hover:text-rose-400 transition"
+          >
+            <LogOut className="h-4 w-4" />
+            <span className="hidden sm:inline">Leave</span>
+          </button>
+        </div>
       </header>
 
       {errorMessage && (
@@ -197,7 +226,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
               isTurn={room.currentTurnPlayerId === p.id}
               isSelf={p.id === socketId}
               compact
-              showPoints={isKatTeh}
+              showPoints={isKatTeh || isSiku}
             />
           </div>
         ))}
@@ -277,7 +306,42 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         </section>
       )}
 
-      {room.status === "playing" && !isKatTeh && (
+      {room.status === "playing" && isSiku && (
+        <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0 pb-4">
+          <div className="relative rounded-2xl sm:rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-4 sm:p-6 min-h-[96px] sm:min-h-[140px] shadow-inner flex flex-col items-center justify-center shrink-0 gap-2">
+            <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
+              Table — {room.sikuCenterRemaining} left in center pile
+            </p>
+            {room.sikuTable.length > 0 ? (
+              <div className="flex gap-1 sm:gap-1.5 flex-wrap justify-center animate-deal-in">
+                {room.sikuTable.map((c, i) => (
+                  <PlayingCard key={i} card={c} small />
+                ))}
+              </div>
+            ) : (
+              <p className="text-emerald-200/50 text-sm">No loose cards on the table yet</p>
+            )}
+          </div>
+
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 mb-2 sm:mb-2.5 flex items-center gap-1.5 px-1">
+              {isMyTurn && <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />}
+              {isMyTurn
+                ? "Your turn — tap a card to drop it"
+                : "Waiting for other players…"}
+            </p>
+            <div className="flex gap-1 sm:gap-1.5 overflow-x-auto overscroll-x-contain -mx-3 px-3 pb-2 sm:flex-wrap sm:overflow-x-visible sm:mx-0 sm:px-0 justify-start sm:justify-center [scrollbar-width:thin]">
+              {hand.map((c, i) => (
+                <div key={i} className="animate-deal-in shrink-0" style={{ animationDelay: `${i * 25}ms` }}>
+                  <PlayingCard card={c} disabled={!isMyTurn} onClick={() => isMyTurn && handlePlaySikuCard(i)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {room.status === "playing" && !isKatTeh && !isSiku && (
         <section className="flex flex-col gap-3 sm:gap-5 flex-1 min-h-0">
           <div className="relative rounded-2xl sm:rounded-[2rem] border border-emerald-900/40 bg-[radial-gradient(ellipse_at_center,_#0f3a2c,_#06160f)] p-4 sm:p-6 min-h-[96px] sm:min-h-[140px] shadow-inner flex items-center justify-center shrink-0">
             <p className="absolute top-2.5 left-3 sm:top-3 sm:left-4 text-[10px] sm:text-[11px] uppercase tracking-wider text-emerald-300/60">
@@ -306,7 +370,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                     card={c}
                     selected={selectedIndices.includes(i)}
                     disabled={!isMyTurn}
-                    onClick={() => isMyTurn && toggleSelected(i)}
+                    onClick={() => isMyTurn && handleSelectCard(i)}
                   />
                 </div>
               ))}
@@ -315,7 +379,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
         </section>
       )}
 
-      {room.status === "playing" && !isKatTeh && (
+      {room.status === "playing" && !isKatTeh && !isSiku && (
         <div className="fixed bottom-0 left-0 right-0 z-20 border-t border-white/10 bg-slate-950/90 backdrop-blur px-3 sm:px-4 py-2.5 sm:py-3 pb-[calc(0.625rem+env(safe-area-inset-bottom))]">
           <div className="max-w-5xl mx-auto flex gap-2.5 sm:gap-3">
             <button
@@ -347,6 +411,7 @@ export default function RoomPage({ params }: { params: Promise<{ code: string }>
                 <li key={id} className={`text-sm ${i === 0 ? "text-amber-300 font-semibold text-base" : "text-slate-300"}`}>
                   {i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : "•"} {p?.name ?? id}
                   {isKatTeh && ` — ${p?.points ?? 0} pts`}
+                  {isSiku && ` — ${p?.points ?? 0} pairs`}
                 </li>
               );
             })}

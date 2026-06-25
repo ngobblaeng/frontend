@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Leng Ngeab Jol",
-  description: "Play Ngeab Jol with friends or bots, no signup required.",
+  description: "Tos Leng Bear Ngeab Jol with friends or bots, no signup required.",
 };
 
 export const viewport: Viewport = {

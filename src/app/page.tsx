@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Spade, Users, Bot, Smartphone, ArrowRight, Sparkles } from "lucide-react";
 import { PlayingCard } from "@/components/PlayingCard";
+import { SoundToggle } from "@/components/SoundToggle";
 import { Rank } from "@/lib/types";
 
 const FEATURES = [
@@ -46,6 +47,7 @@ export default function Home() {
           <Link href="/join" className="text-sm text-slate-400 hover:text-slate-200 transition">
             Have a room code?
           </Link>
+          <SoundToggle />
         </div>
       </nav>
 

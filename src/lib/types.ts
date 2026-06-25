@@ -60,6 +60,8 @@ export interface PublicRoomState {
   isTraining: boolean;
   currentTrick: TrickPlay[];
   leadSuit: Suit | null;
+  sikuTable: Card[];
+  sikuCenterRemaining: number;
 }
 
 export interface ChatMessage {
